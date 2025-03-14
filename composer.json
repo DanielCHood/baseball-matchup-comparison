@@ -1,0 +1,22 @@
+{
+    "name": "danielchood/baseball-matchup-comparison",
+    "description": "Library for comparing batters and pitchers",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Daniel Hood",
+            "email": "mrdhood@gmail.com"
+        }
+    ],
+    "require": {
+        "guzzlehttp/guzzle": "^7.9",
+        "illuminate/collections": "^12.2",
+        "symfony/http-foundation": "^7.2",
+        "nikic/fast-route": "^1.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "DanielCHood\\BaseballMatchupComparison\\": "src/"
+        }
+    }
+}
