@@ -13,8 +13,8 @@ class HomeRun {
 
     public function isValid(): bool {
         return $this->getHomeRunScore() > 0
-            && $this->getBatterPitchCountRounded() >= 400
-            #&& $this->getPitcherPitchCountRounded() >= 400
+            && $this->getBatterPitchCount() >= 400
+            && $this->getPitcherPitchCount() >= 400
             && $this->getHitScore() > 2.5000
             && $this->getVelocityScore() > 1.5;
     }
@@ -63,7 +63,7 @@ class HomeRun {
             }
 
             $velocity = $section['velocity'];
-            $frequency = $section['pitchCount'] / $this->getPitcherPitchCountRounded();
+            $frequency = $section['pitchCount'] / $this->getPitcherPitchCount();
 
             $batterAverageSeenVelocity = $batterSection['velocity'] ?? 0;
             if ($batterAverageSeenVelocity === 0) {
@@ -77,50 +77,24 @@ class HomeRun {
     }
 
     public function win(): bool {
-        return $this->matchup->didHomer(false);
+        return $this->matchup->didHomer(true);
     }
 
     public function getLabel(): string {
-        return ''
-            #. 'hitScore=' . floor($this->matchup->getHitScore())
-            . '; hrScore=' . round($this->matchup->getHomeRunScore() * 10)
-            #. '; pitcherPitchCount=' . (floor($this->getPitcherPitchCountRounded() / 100) * 100)
-            #. '; batterPitchCount=' . (floor($this->getBatterPitchCountRounded() / 100) * 100)
+        return 'HomeRun-'
+            #. 'hitScore=' . floor($this->getHitScore()) * 10
+            #. '; hrScore=' . round($this->getHomeRunScore() * 10)
+            #. '; pitcherPitchCount=' . (floor($this->getPitcherPitchCount() / 100) * 100)
+            #. '; batterPitchCount=' . (floor($this->getBatterPitchCount() / 100) * 100)
             #. '; velocity=' . $this->getVelocityLabel()
             ;
     }
 
-    private function getBatterPitchCountRounded(): float {
+    private function getBatterPitchCount(): float {
         return array_sum(array_column($this->matchup->getBatterStats()->getTagged(), 'pitchCount'));
     }
 
-    private function getPitcherPitchCountRounded(): float {
+    private function getPitcherPitchCount(): float {
         return array_sum(array_column($this->matchup->getPitcherStats()->getTagged(), 'pitchCount'));
-    }
-
-    private function getVelocityLabel(): string {
-        $group = floor($this->getVelocityScore()) * 10;
-
-        if ($group >= 50) {
-            return '>=50';
-        }
-
-        if ($group >= 40) {
-            return '>=40';
-        }
-
-        if ($group >= 30) {
-            return '>=30';
-        }
-
-        if ($group >= 20) {
-            return '>=20';
-        }
-
-        if ($group >= 10) {
-            return '>=10';
-        }
-
-        return '>0';
     }
 }

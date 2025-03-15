@@ -8,7 +8,8 @@ use DanielCHood\BaseballMatchupComparison\Prediction\HomeRun;
 use DanielCHood\BaseballMatchupComparison\Repository\Event;
 use GuzzleHttp\Client;
 
-$date = new DateTime($argv[1] ?? 'now');
+$startDate = new DateTime($argv[1] ?? 'now');
+$maxIterations = $argv[2] ?? 1;
 
 $dataProvider = new LeetisApiEvent(
     new Client([
@@ -20,9 +21,11 @@ $iterations = 0;
 
 $groups = [];
 
+$date = $startDate;
+
 while (true) {
     $repo = new Event($dataProvider);
-    $eventIds = $repo->getEventIdsOnDate($date);
+    $eventIds = $repo->getEventIdsOnDate($startDate);
 
     $iterations++;
     $date = $date->modify('+1 day');
@@ -47,10 +50,12 @@ while (true) {
         }
     }
 
-    if ($iterations === 90) {
+    if ($iterations === $maxIterations) {
         break;
     }
 }
+
+echo $date->format('Y-m-d') . "\n";
 
 var_dump($groups);
 
