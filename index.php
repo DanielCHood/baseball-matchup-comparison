@@ -5,7 +5,7 @@ use DanielCHood\BaseballMatchupComparison\Matchup;
 use DanielCHood\BaseballMatchupComparison\Repository\Event;
 use GuzzleHttp\Client;
 
-$eventId = 401570895;
+$eventId = $_GET['id'] ?? 401570895;
 
 $dataProvider = new LeetisApiEvent(
     new Client([
@@ -14,10 +14,29 @@ $dataProvider = new LeetisApiEvent(
 );
 
 $repo = new Event($dataProvider);
-$matchups = $repo->getAllMatchups($eventId);
+$matchups = $repo->getAllMatchups($eventId, ['zone;type']);
 
+$matchups = $matchups->sortByDesc(function (Matchup $matchup) {
+    return $matchup->getHitScore();
+});
+
+echo "hits:<br />";
 /** @var Matchup $matchup */
 foreach ($matchups as $matchup) {
-    echo json_encode($matchup->getPitcherStats()->toArray());
-    break;
+    echo $matchup->getBatterStats()->getName() . ": " . $matchup->getBatterStats()
+        . "; hitStarter=" . ($matchup->didHit(true) ? 'yes' : 'no')
+        . "; hitAny=" . ($matchup->didHit(false) ? 'yes' : 'no')
+        . "<br />";
+}
+
+$matchups = $matchups->sortByDesc(function (Matchup $matchup) {
+    return $matchup->getHomeRunScore();
+});
+
+echo "<br />home runs:<br />";
+foreach ($matchups as $matchup) {
+    echo $matchup->getBatterStats()->getName() . ": " . $matchup->getHomeRunScore()
+        . "; hrStarter=" . ($matchup->didHomer(true) ? 'yes' : 'no')
+        . "; hrAny=" . ($matchup->didHomer(false) ? 'yes' : 'no')
+        . "<br />";
 }

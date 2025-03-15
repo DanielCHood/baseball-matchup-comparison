@@ -3,15 +3,14 @@
 namespace DanielCHood\BaseballMatchupComparison;
 
 class PlayerStats {
-    private array $zones = [];
-    private array $pitchTypes = [];
-
-    private array $blended = [];
+    private array $tags = [];
 
     public function __construct(
+        private readonly int $id,
         private readonly string $position,
         private readonly string $name,
         private readonly array $plays,
+        private readonly array $tagsToUse = ['zone-', 'type-', 'zone-;type-'],
     ) {
         $this->process();
     }
@@ -21,7 +20,8 @@ class PlayerStats {
         $noCountTypes = ['batter-reached-on-error-batter-to-first', 'catchers-interference-batter-to-firsterror', 'hit-by-pitch', 'ball'];
 
         $zones = new Zones();
-        $atBatIds = [];
+
+        $pitchCount = 0;
 
         foreach ($plays as $play) {
             if (in_array($play['result'], $noCountTypes)) {
@@ -34,76 +34,67 @@ class PlayerStats {
                 continue;
             }
 
-            if (!isset($this->zones[$zone])) {
-                $this->zones[$zone] = [
-                    'zone' => $zone,
-                    'pitchCount' => 0,
-                    #'atBatCount' => 0,
-                    'hits' => 0,
-                    'homeRuns' => 0,
-                ];
-            }
-
             $type = $play['type'];
-            if (!isset($this->pitchTypes[$type])) {
-                $this->pitchTypes[$type] = [
-                    'pitchType' => $type,
-                    'pitchCount' => 0,
-                    #'atBatCount' => 0,
-                    'hits' => 0,
-                    'homeRuns' => 0,
-                ];
+
+            foreach ($this->tagsToUse as $tag) {
+                $tag = str_replace(
+                    [
+                        'zone',
+                        'type',
+                    ],
+                    [
+                        'zone-' . $zone,
+                        'type-' . $type,
+                    ],
+                    $tag
+                );
+
+                if (!isset($this->tags[$tag])) {
+                    $this->tags[$tag] = [
+                        'pitchCount' => 0,
+                        'hits' => 0,
+                        'homeRuns' => 0,
+                        'velocity' => 0,
+                        'velocityHits' => 0,
+                        'velocityHomeRuns' => 0,
+                    ];
+
+                    if (stristr($tag, 'zone-')) {
+                        $this->tags[$tag]['zone'] = $zone;
+                    }
+
+                    if (stristr($tag, 'type-')) {
+                        $this->tags[$tag]['type'] = $type;
+                    }
+                }
+
+                $this->tags[$tag]['pitchCount']++;
+
+                $this->tags[$tag]['velocity'] += $play['velocity'];
+
+                if ($this->isHit($play['result'])) {
+                    $this->tags[$tag]['hits'] += 1;
+                    $this->tags[$tag]['velocityHits'] += $play['velocity'];
+                }
+
+                if ($this->isHomeRun($play['result'])) {
+                    $this->tags[$tag]['homeRuns'] += 1;
+                    $this->tags[$tag]['velocityHomeRuns'] += $play['velocity'];
+                }
             }
 
-            if (!isset($this->blended[$zone][$type])) {
-                $this->blended[$zone][$type] = [
-                    'zone' => $zone,
-                    'pitchType' => $type,
-                    'pitchCount' => 0,
-                    #'atBatCount' => 0,
-                    'hits' => 0,
-                    'homeRuns' => 0,
-                ];
-            }
+            $pitchCount++;
+        }
 
-            if (!isset($atBatIds['zone-'.$zone])) {
-                $atBatIds['zone-'.$zone] = [];
-            }
+        foreach ($this->tags as &$tag) {
+            $tag['velocityHomeRuns'] = $tag['homeRuns'] > 0 ? $tag['velocity'] / $tag['homeRuns'] : 0;
+            $tag['velocityHits'] = $tag['hits'] > 0 ? $tag['velocity'] / $tag['hits'] : 0;
+            $tag['velocity'] = $tag['velocity'] / $tag['pitchCount'];
 
-            if (!isset($atBatIds['type-'.$type])) {
-                $atBatIds['type-'.$type] = [];
-            }
-
-            if (!isset($atBatIds['blended-'.$zone.'-'.$type])) {
-                $atBatIds['blended-'.$zone.'-'.$type] = [];
-            }
-
-            if (!in_array($play['atBatId'], $atBatIds['zone-'.$zone])) {
-                $atBatIds['zone-'.$zone][] = $play['atBatId'];
-            }
-
-            if (!in_array($play['atBatId'], $atBatIds['type-'.$type])) {
-                $atBatIds['type-'.$type][] = $play['atBatId'];
-            }
-
-            if (!in_array($play['atBatId'], $atBatIds['blended-'.$zone.'-'.$type])) {
-                $atBatIds['blended-'.$zone.'-'.$type][] = $play['atBatId'];
-            }
-
-            $this->zones[$zone]['pitchCount']++;
-            #$this->zones[$zone]['atBatCount'] = count($atBatIds['zone-'.$zone]);
-            $this->zones[$zone]['hits'] += $this->isHit($play['result']) ? 1 : 0;
-            $this->zones[$zone]['homeRuns'] += $this->isHomeRun($play['result']) ? 1 : 0;
-
-            $this->pitchTypes[$type]['pitchCount']++;
-            #$this->pitchTypes[$type]['atBatCount'] = count($atBatIds['type-'.$type]);
-            $this->pitchTypes[$type]['hits'] += $this->isHit($play['result']) ? 1 : 0;
-            $this->pitchTypes[$type]['homeRuns'] += $this->isHomeRun($play['result']) ? 1 : 0;
-
-            $this->blended[$zone][$type]['pitchCount']++;
-            #$this->blended[$zone][$type]['atBatCount'] = count($atBatIds['blended-'.$zone.'-'.$type]);
-            $this->blended[$zone][$type]['hits'] += $this->isHit($play['result']) ? 1 : 0;
-            $this->blended[$zone][$type]['homeRuns'] += $this->isHomeRun($play['result']) ? 1 : 0;
+            $tag['hitPercent'] = ($tag['hits'] / $tag['pitchCount']) * 100;
+            $tag['homeRunPercent'] = ($tag['homeRuns'] / $tag['pitchCount']) * 100;
+            $tag['hitPercentWeighted'] = $tag['hitPercent'] * ($tag['pitchCount'] / $pitchCount);
+            $tag['homeRunPercentWeighted'] = $tag['homeRunPercent'] * ($tag['pitchCount'] / $pitchCount);
         }
     }
 
@@ -119,13 +110,29 @@ class PlayerStats {
         return in_array($result, $hitResultTypes) ? 1 : 0;
     }
 
+    public function getId(): int {
+        return $this->id;
+    }
+
+    public function getName(): string {
+        return $this->name;
+    }
+
+    public function getTagged(): array {
+        return $this->tags;
+    }
+
     public function toArray(): array {
+        $tags = $this->tags;
+        uksort($tags, function ($a, $b) {
+            return $b < $a;
+        });
+
         return [
+            'id' => $this->id,
             'name' => $this->name,
             'position' => $this->position,
-            'zones' => $this->zones,
-            'pitchTypes' => $this->pitchTypes,
-            'blended' => $this->blended,
+            'tagged' => $tags
         ];
     }
 }
