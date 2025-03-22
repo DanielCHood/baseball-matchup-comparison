@@ -22,12 +22,17 @@ class Event {
         $data = $this->dataProvider->load($id);
         $startingPitchers = $data['startingPitchers'] ?? [];
         $batters = $data['batters'] ?? [];
+        $homeTeamId = $data['homeTeamId'] ?? null;
+        $awayTeamId = $data['awayTeamId'] ?? null;
+        $homeTeamMoneyline = $data['homeMoneyLine'] ?? null;
+        $awayTeamMoneyline = $data['awayMoneyLine'] ?? null;
 
         $matchups = new Collection();
 
         foreach ($startingPitchers as $startingPitcher) {
             $pitcherStats = new PlayerStats(
                 $startingPitcher['id'],
+                $startingPitcher['teamId'],
                 'pitcher',
                 $startingPitcher['name'],
                 array_filter($startingPitcher['plays'], function($play) use ($id) {
@@ -44,6 +49,7 @@ class Event {
 
                 $batterStats = new PlayerStats(
                     $batter['id'],
+                    $batter['teamId'],
                     'batter',
                     $batter['name'],
                     array_filter($batter['plays'], function($play) use ($id) {
@@ -54,6 +60,10 @@ class Event {
 
                 $matchups->push(
                     new Matchup(
+                        $homeTeamId,
+                        $awayTeamId,
+                        $homeTeamMoneyline,
+                        $awayTeamMoneyline,
                         $pitcherStats,
                         $batterStats,
                         array_filter($batter['plays'], function($play) use ($id) {

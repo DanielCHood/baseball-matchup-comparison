@@ -5,8 +5,11 @@ namespace DanielCHood\BaseballMatchupComparison;
 class PlayerStats {
     private array $tags = [];
 
+    public readonly float $battingAverage;
+
     public function __construct(
         private readonly int $id,
+        private readonly int $teamId,
         private readonly string $position,
         private readonly string $name,
         private readonly array $plays,
@@ -20,6 +23,16 @@ class PlayerStats {
         $noCountTypes = ['batter-reached-on-error-batter-to-first', 'catchers-interference-batter-to-firsterror', 'hit-by-pitch', 'ball'];
 
         $zones = new Zones();
+
+        // set overall batting average;
+        if ($this->position === 'batter') {
+            $hits = array_filter($plays, function ($play) { return $this->isHit($play['result']); });
+            $atBats = array_unique(array_column($plays, 'atBatId'));
+            $this->battingAverage = count($hits) / max(count($atBats), 1);
+        }
+        else {
+            $this->battingAverage = 0.00;
+        }
 
         $pitchCount = 0;
 
@@ -86,15 +99,15 @@ class PlayerStats {
             $pitchCount++;
         }
 
-        foreach ($this->tags as &$tag) {
-            $tag['velocityHomeRuns'] = $tag['homeRuns'] > 0 ? $tag['velocity'] / $tag['homeRuns'] : 0;
-            $tag['velocityHits'] = $tag['hits'] > 0 ? $tag['velocity'] / $tag['hits'] : 0;
-            $tag['velocity'] = $tag['velocity'] / $tag['pitchCount'];
+        foreach ($this->tags as $key => $tag) {
+            $this->tags[$key]['velocityHomeRuns'] = $this->tags[$key]['homeRuns'] > 0 ? $this->tags[$key]['velocity'] / $this->tags[$key]['homeRuns'] : 0;
+            $this->tags[$key]['velocityHits'] = $this->tags[$key]['hits'] > 0 ? $this->tags[$key]['velocity'] / $this->tags[$key]['hits'] : 0;
+            $this->tags[$key]['velocity'] = $this->tags[$key]['velocity'] / $this->tags[$key]['pitchCount'];
 
-            $tag['hitPercent'] = ($tag['hits'] / $tag['pitchCount']) * 100;
-            $tag['homeRunPercent'] = ($tag['homeRuns'] / $tag['pitchCount']) * 100;
-            $tag['hitPercentWeighted'] = $tag['hitPercent'] * ($tag['pitchCount'] / $pitchCount);
-            $tag['homeRunPercentWeighted'] = $tag['homeRunPercent'] * ($tag['pitchCount'] / $pitchCount);
+            $this->tags[$key]['hitPercent'] = ($this->tags[$key]['hits'] / $this->tags[$key]['pitchCount']) * 100;
+            $this->tags[$key]['homeRunPercent'] = ($this->tags[$key]['homeRuns'] / $this->tags[$key]['pitchCount']) * 100;
+            $this->tags[$key]['hitPercentWeighted'] = $this->tags[$key]['hitPercent'] * ($this->tags[$key]['pitchCount'] / $pitchCount);
+            $this->tags[$key]['homeRunPercentWeighted'] = $this->tags[$key]['homeRunPercent'] * ($this->tags[$key]['pitchCount'] / $pitchCount);
         }
     }
 
@@ -116,6 +129,10 @@ class PlayerStats {
 
     public function getName(): string {
         return $this->name;
+    }
+
+    public function getTeamId(): int {
+        return $this->teamId;
     }
 
     public function getTagged(): array {
