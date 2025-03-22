@@ -8,6 +8,10 @@ class Matchup
 
 
     public function __construct(
+        public readonly int $homeTeamId,
+        public readonly int $awayTeamId,
+        public readonly int $homeTeamMoneyline,
+        public readonly int $awayTeamMoneyline,
         private PlayerStats $pitcherStats,
         private PlayerStats $batterStats,
         private readonly array $matchupPlays,
@@ -22,6 +26,16 @@ class Matchup
 
     public function getBatterStats(): PlayerStats {
         return $this->batterStats;
+    }
+
+    public function getBatterMoneyline(): int {
+        if ($this->getBatterStats()->getTeamId() === $this->homeTeamId) {
+            return $this->homeTeamMoneyline;
+        }
+
+        if ($this->getBatterStats()->getTeamId() === $this->awayTeamId) {
+            return $this->awayTeamMoneyline;
+        }
     }
 
     public function didHit(bool $starterOnly = true): bool {

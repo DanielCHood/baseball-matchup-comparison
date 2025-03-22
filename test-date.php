@@ -4,12 +4,15 @@ require_once('vendor/autoload.php');
 
 use DanielCHood\BaseballMatchupComparison\DataProvider\LeetisApiEvent;
 use DanielCHood\BaseballMatchupComparison\Matchup;
-use DanielCHood\BaseballMatchupComparison\Prediction\HomeRun;
+use DanielCHood\BaseballMatchupComparison\Prediction\HomeRunStartingPitcher;
+use DanielCHood\BaseballMatchupComparison\Prediction\HomeRunAnyPitcher;
+use DanielCHood\BaseballMatchupComparison\Prediction\PredictionInterface;
 use DanielCHood\BaseballMatchupComparison\Repository\Event;
 use GuzzleHttp\Client;
 
 $startDate = new DateTime($argv[1] ?? 'now');
 $maxIterations = $argv[2] ?? 1;
+$maxIterations = intval($maxIterations);
 
 $dataProvider = new LeetisApiEvent(
     new Client([
@@ -23,29 +26,49 @@ $groups = [];
 
 $date = $startDate;
 
+$predicters = [
+    #HomeRunAnyPitcher::class,
+    HomeRunStartingPitcher::class,
+];
+
 while (true) {
     $repo = new Event($dataProvider);
     $eventIds = $repo->getEventIdsOnDate($startDate);
 
     $iterations++;
+
+    #echo $date->format('Y-m-d') . " (iteration: " . $iterations . "/" . $maxIterations . ")\n";
+
     $date = $date->modify('+1 day');
 
     foreach ($eventIds as $eventId) {
-        $matchups = $repo->getAllMatchups($eventId, ['zone;type']);
+        $groupPrefix = '';
+        #$groupPrefix .= $date->format('m') . '-';
+
+        try {
+            $matchups = $repo->getAllMatchups($eventId, ['zone;type']);
+        } catch (\TypeError $e) {
+            echo "Error processing event id: " . $eventId . "\n";
+            continue;
+        }
 
         /** @var Matchup $matchup */
         foreach ($matchups as $matchup) {
+            /** @var PredictionInterface $predicter */
+            foreach ($predicters as $predicter) {
+                $predict = new $predicter($matchup);
+                if ($predict->isValid()) {
+                    $label = $groupPrefix . $predict->getLabel();
 
-            $predict = new HomeRun($matchup);
-            if ($predict->isValid()) {
-                if (!isset($groups[$predict->getLabel()])) {
-                    $groups[$predict->getLabel()] = ['wins' => 0, 'losses' => 0];
+                    if (!isset($groups[$label])) {
+                        $groups[$label] = ['wins' => 0, 'losses' => 0];
+                    }
+
+                    $groups[$label]['wins'] += ($predict->win() ? 1 : 0);
+                    $groups[$label]['losses'] += (!$predict->win() ? 1 : 0);
+
+                    $groups[$label]['rate'] = $groups[$label]['wins'] / ($groups[$label]['wins'] + $groups[$label]['losses']) * 100;
                 }
-
-                $groups[$predict->getLabel()]['wins'] += ($predict->win() ? 1 : 0);
-                $groups[$predict->getLabel()]['losses'] += (!$predict->win() ? 1 : 0);
-
-                $groups[$predict->getLabel()]['rate'] = $groups[$predict->getLabel()]['wins'] / ($groups[$predict->getLabel()]['wins'] + $groups[$predict->getLabel()]['losses']) * 100;
             }
         }
     }
@@ -56,6 +79,10 @@ while (true) {
 }
 
 echo $date->format('Y-m-d') . "\n";
+
+uasort($groups, function ($a, $b) {
+    return $a['wins'] <=> $b['wins'];
+});
 
 var_dump($groups);
 

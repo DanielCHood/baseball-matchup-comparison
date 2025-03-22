@@ -4,19 +4,41 @@ namespace DanielCHood\BaseballMatchupComparison\Prediction;
 
 use DanielCHood\BaseballMatchupComparison\Matchup;
 
-class HomeRun {
+class HomeRunStartingPitcher implements PredictionInterface {
     public function __construct(
-        private readonly Matchup $matchup
+        protected readonly Matchup $matchup
     ) {
 
     }
 
     public function isValid(): bool {
-        return $this->getHomeRunScore() > 0
+        return $this->getHomeRunScore() > .15
             && $this->getBatterPitchCount() >= 400
             && $this->getPitcherPitchCount() >= 400
-            && $this->getHitScore() > 2.5000
-            && $this->getVelocityScore() > 1.5;
+            && $this->getHitScore() > 0.0000
+            && $this->matchup->getBatterMoneyline() < 0
+            && $this->getVelocityScore() > 2
+            && $this->getBatterHomeRunPercentage() > 1.5;
+    }
+
+    public function getLabel(): string {
+        return 'HomeRunStartingPitcher'
+            #. '; home=' . ($this->matchup->homeTeamId === $this->matchup->getBatterStats()->getTeamId() ? 'true' : 'false')
+            #. '; favorite=' . ($this->matchup->getBatterMoneyline() > 0 ? 'true' : 'false')
+            #. 'ml=' . floor($this->matchup->getBatterMoneyline() / 10)
+            #. 'hitScore=' . floor($this->getHitScore()) * 10
+            #. '; hrScore=' . round($this->getHomeRunScore() * 10)
+            #. '; pitcherPitchCount=' . (floor($this->getPitcherPitchCount() / 100) * 100)
+            #. '; batterPitchCount=' . (floor($this->getBatterPitchCount() / 100) * 100)
+            #. '; velocity=' . (floor($this->getVelocityScore()))
+            #. '; batterHrPercent=' . (floor($this->getBatterHomeRunPercentage()))
+            #. '; pitcherHrPercent=' . (floor($this->getPitcherHomeRunPercentage()))
+            . '; battingAverage=' . (floor($this->getBattingAverage() * 10))
+            ;
+    }
+
+    public function win(): bool {
+        return $this->matchup->didHomer(true);
     }
 
     public function getHitScore(): float {
@@ -33,6 +55,26 @@ class HomeRun {
         }
 
         return $score;
+    }
+
+    public function getBatterHomeRunPercentage(): float {
+        $tagged = $this->matchup->getBatterStats()->getTagged();
+        $homeRunCount = array_sum(array_column($tagged, 'homeRuns'));
+        $pitchCount = array_sum(array_column($tagged, 'pitchCount'));
+
+        return $homeRunCount / $pitchCount * 100;
+    }
+
+    public function getBattingAverage(): float {
+        return $this->matchup->getBatterStats()->battingAverage;
+    }
+
+    public function getPitcherHomeRunPercentage(): float {
+        $tagged = $this->matchup->getPitcherStats()->getTagged();
+        $homeRunCount = array_sum(array_column($tagged, 'homeRuns'));
+        $pitchCount = array_sum(array_column($tagged, 'pitchCount'));
+
+        return $homeRunCount / $pitchCount * 100;
     }
 
     public function getHomeRunScore(): float {
@@ -74,20 +116,6 @@ class HomeRun {
         }
 
         return $score;
-    }
-
-    public function win(): bool {
-        return $this->matchup->didHomer(true);
-    }
-
-    public function getLabel(): string {
-        return 'HomeRun-'
-            #. 'hitScore=' . floor($this->getHitScore()) * 10
-            #. '; hrScore=' . round($this->getHomeRunScore() * 10)
-            #. '; pitcherPitchCount=' . (floor($this->getPitcherPitchCount() / 100) * 100)
-            #. '; batterPitchCount=' . (floor($this->getBatterPitchCount() / 100) * 100)
-            #. '; velocity=' . $this->getVelocityLabel()
-            ;
     }
 
     private function getBatterPitchCount(): float {
