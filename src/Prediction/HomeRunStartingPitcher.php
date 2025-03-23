@@ -18,13 +18,14 @@ class HomeRunStartingPitcher implements PredictionInterface {
             && $this->getHitScore() > 0.0000
             && $this->matchup->getBatterMoneyline() < 0
             && $this->getVelocityScore() > 2
-            && $this->getBatterHomeRunPercentage() > 1.5;
+            && $this->getBatterHomeRunPercentage() > 1.5
+            && $this->getBattingAverage() > 0.1500;
     }
 
     public function getLabel(): string {
         return 'HomeRunStartingPitcher'
-            #. '; home=' . ($this->matchup->homeTeamId === $this->matchup->getBatterStats()->getTeamId() ? 'true' : 'false')
-            #. '; favorite=' . ($this->matchup->getBatterMoneyline() > 0 ? 'true' : 'false')
+            . '; home=' . ($this->matchup->homeTeamId === $this->matchup->getBatterStats()->getTeamId() ? 'true' : 'false')
+            . '; favorite=' . ($this->matchup->getBatterMoneyline() > 0 ? 'true' : 'false')
             #. 'ml=' . floor($this->matchup->getBatterMoneyline() / 10)
             #. 'hitScore=' . floor($this->getHitScore()) * 10
             #. '; hrScore=' . round($this->getHomeRunScore() * 10)
@@ -33,7 +34,7 @@ class HomeRunStartingPitcher implements PredictionInterface {
             #. '; velocity=' . (floor($this->getVelocityScore()))
             #. '; batterHrPercent=' . (floor($this->getBatterHomeRunPercentage()))
             #. '; pitcherHrPercent=' . (floor($this->getPitcherHomeRunPercentage()))
-            . '; battingAverage=' . (floor($this->getBattingAverage() * 10))
+            #. '; battingAverage=' . (floor($this->getBattingAverage() * 10))
             ;
     }
 
