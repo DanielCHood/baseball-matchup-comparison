@@ -12,6 +12,7 @@ if (
     !str_starts_with($path, '.')
     && !str_contains($path, '/')
     && file_exists('../'.$path)
+    && !is_dir('../'.$path)
 ) {
     echo nl2br(file_get_contents('../'.$path));
     die;
@@ -28,19 +29,25 @@ $dataProvider = new LeetisApiEvent(
 $repo = new Event($dataProvider);
 $matchups = $repo->getAllMatchups($eventId, ['zone;type']);
 
-echo "hits:<br />";
 /** @var Matchup $matchup */
 foreach ($matchups as $matchup) {
-    echo $matchup->getBatterStats()->getName() . ": "
-        . "; hitStarter=" . ($matchup->didHit(true) ? 'yes' : 'no')
-        . "; hitAny=" . ($matchup->didHit(false) ? 'yes' : 'no')
-        . "<br />";
-}
-
-echo "<br />home runs:<br />";
-foreach ($matchups as $matchup) {
-    echo $matchup->getBatterStats()->getName() . ": "
-        . "; hrStarter=" . ($matchup->didHomer(true) ? 'yes' : 'no')
-        . "; hrAny=" . ($matchup->didHomer(false) ? 'yes' : 'no')
-        . "<br />";
+    echo "<h2>" .$matchup->getPitcherStats()->getName() . " vs " . $matchup->getBatterStats()->getName() . "</h2>";
+    echo "<table border='1' cellpadding='5' cellspacing='0'>";
+    echo "<tr>";
+    echo "<th>Zone</th>";
+    echo "<th>Pitch Type</th>";
+    echo "<th>Pitch Count</th>";
+    echo "<th>Hit Rate</th>";
+    echo "<th>Home Run Rate</th>";
+    echo "</tr>";
+    foreach ($matchup->getBatterStats()->getTagged() as $stats) {
+        echo "<tr>";
+        echo "<td>" . $stats['zone'] . "</td>";
+        echo "<td>" . $stats['type'] . "</td>";
+        echo "<td>" . $stats['pitchCount'] . "</td>";
+        echo "<td>" . $stats['hitPercent'] . "</td>";
+        echo "<td>" . $stats['homeRunPercent'] . "</td>";
+        echo "</tr>";
+    }
+    echo "</table>";
 }

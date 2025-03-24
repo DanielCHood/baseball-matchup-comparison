@@ -12,14 +12,14 @@ class PlayerStats {
         private readonly int $teamId,
         private readonly string $position,
         private readonly string $name,
-        private readonly array $plays,
+        array $plays,
         private readonly array $tagsToUse = ['zone-', 'type-', 'zone-;type-'],
     ) {
-        $this->process();
+        $this->process($plays);
     }
 
-    private function process(): void {
-        $plays = array_filter($this->plays, function($play) { return $play['position'] === $this->position; });
+    private function process(array $plays): void {
+        $plays = array_filter($plays, function($play) { return $play['position'] === $this->position; });
         $noCountTypes = ['batter-reached-on-error-batter-to-first', 'catchers-interference-batter-to-firsterror', 'hit-by-pitch', 'ball'];
 
         $zones = new Zones();

@@ -33,19 +33,3 @@ use DanielCHood\BaseballMatchupComparison\Repository\Event;
 $eventId = 123;
 $matchups = $repo->getAllMatchups($eventId);
 ```
-
-### Checking a home run prediction
-
-```php
-use DanielCHood\BaseballMatchupComparison\Prediction\HomeRunStartingPitcher;
-
-foreach ($matchups as $matchup) {
-    $prediction = new HomeRunStartingPitcher($matchup);
-    if ($prediction->isValid()) {
-        echo $matchup->getBatterStats()->getName() . " will hit a home run." . PHP_EOL;
-            if ($prediction->win()) {
-                echo " - won" . PHP_EOL;
-            }
-    }
-}
-```

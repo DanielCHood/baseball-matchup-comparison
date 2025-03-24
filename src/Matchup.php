@@ -6,7 +6,6 @@ namespace DanielCHood\BaseballMatchupComparison;
 class Matchup
 {
 
-
     public function __construct(
         public readonly int $homeTeamId,
         public readonly int $awayTeamId,
