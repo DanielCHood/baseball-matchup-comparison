@@ -2,16 +2,16 @@
 
 namespace DanielCHood\BaseballMatchupComparison;
 
-class PlayerStats {
+use DanielCHood\BaseballMatchupComparison\Entity\Athlete;
+use JsonSerializable;
+
+class PlayerStats implements JsonSerializable {
     private array $tags = [];
 
     public readonly float $battingAverage;
 
     public function __construct(
-        private readonly int $id,
-        private readonly int $teamId,
-        private readonly string $position,
-        private readonly string $name,
+        private readonly Athlete $athlete,
         array $plays,
         private readonly array $tagsToUse = ['zone-', 'type-', 'zone-;type-'],
     ) {
@@ -19,13 +19,13 @@ class PlayerStats {
     }
 
     private function process(array $plays): void {
-        $plays = array_filter($plays, function($play) { return $play['position'] === $this->position; });
+        $plays = array_filter($plays, function($play) { return $play['position'] === $this->athlete->position; });
         $noCountTypes = ['batter-reached-on-error-batter-to-first', 'catchers-interference-batter-to-firsterror', 'hit-by-pitch', 'ball'];
 
         $zones = new Zones();
 
         // set overall batting average;
-        if ($this->position === 'batter') {
+        if ($this->athlete->position === 'batter') {
             $hits = array_filter($plays, function ($play) { return $this->isHit($play['result']); });
             $atBats = array_unique(array_column($plays, 'atBatId'));
             $this->battingAverage = count($hits) / max(count($atBats), 1);
@@ -124,15 +124,15 @@ class PlayerStats {
     }
 
     public function getId(): int {
-        return $this->id;
+        return $this->athlete->id;
     }
 
     public function getName(): string {
-        return $this->name;
+        return $this->athlete->name;
     }
 
     public function getTeamId(): int {
-        return $this->teamId;
+        return $this->athlete->team->id;
     }
 
     public function getTagged(): array {
@@ -140,15 +140,17 @@ class PlayerStats {
     }
 
     public function toArray(): array {
+        return json_decode(json_encode($this), true);
+    }
+
+    public function jsonSerialize(): array {
         $tags = $this->tags;
         uksort($tags, function ($a, $b) {
             return $b < $a;
         });
 
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'position' => $this->position,
+            'athlete' => $this->athlete,
             'tagged' => $tags
         ];
     }

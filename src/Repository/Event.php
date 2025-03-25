@@ -3,6 +3,8 @@
 namespace DanielCHood\BaseballMatchupComparison\Repository;
 
 use DanielCHood\BaseballMatchupComparison\DataProvider\EventInterface;
+use DanielCHood\BaseballMatchupComparison\Entity\Athlete;
+use DanielCHood\BaseballMatchupComparison\Entity\Team;
 use DanielCHood\BaseballMatchupComparison\Matchup;
 use DanielCHood\BaseballMatchupComparison\PlayerStats;
 use DateTime;
@@ -20,6 +22,7 @@ class Event {
 
     public function getAllMatchups(int $id, array $tags): Collection {
         $data = $this->dataProvider->load($id);
+
         $startingPitchers = $data['startingPitchers'] ?? [];
         $batters = $data['batters'] ?? [];
         $homeTeamId = $data['homeTeamId'] ?? null;
@@ -30,11 +33,19 @@ class Event {
         $matchups = new Collection();
 
         foreach ($startingPitchers as $startingPitcher) {
-            $pitcherStats = new PlayerStats(
+            $pitcher = new Athlete(
+                new Team(
+                    $startingPitcher['teamId'],
+                    $data['teams'][$startingPitcher['teamId']]['name'],
+                    $data['teams'][$startingPitcher['teamId']]['abbreviation'],
+                ),
                 $startingPitcher['id'],
-                $startingPitcher['teamId'],
-                'pitcher',
                 $startingPitcher['name'],
+                'pitcher',
+            );
+
+            $pitcherStats = new PlayerStats(
+                $pitcher,
                 array_filter($startingPitcher['plays'], function($play) use ($id) {
                     return $play['position'] === 'pitcher' && $play['eventId'] < $id;
                 }),
@@ -47,11 +58,19 @@ class Event {
                     continue;
                 }
 
-                $batterStats = new PlayerStats(
+                $player = new Athlete(
+                    new Team(
+                        $batter['teamId'],
+                        $data['teams'][$batter['teamId']]['name'],
+                        $data['teams'][$batter['teamId']]['abbreviation'],
+                    ),
                     $batter['id'],
-                    $batter['teamId'],
-                    'batter',
                     $batter['name'],
+                    'batter',
+                );
+
+                $batterStats = new PlayerStats(
+                    $player,
                     array_filter($batter['plays'], function($play) use ($id) {
                         return $play['position'] === 'batter' && $play['eventId'] < $id;
                     }),
